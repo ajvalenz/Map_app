@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/map"
+        class="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:layout_width="match_parent"
+        android:layout_height="800dp"
+        tools:layout="@layout/activity_maps" />
+
+
+    <ImageButton
+        android:id="@+id/btnTakeScreenshot"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:onClick="onTakeScreenshotButtonClick"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentTop="true"
+        android:background="@drawable/round_cb"
+        android:src="@drawable/screen_shot"
+        android:padding="8dp"
+        android:layout_marginTop="10dp"
+        android:scaleType="fitCenter" />
+
+
+    <ImageButton
+        android:id="@+id/pinBtn"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:background="@drawable/round_cb"
+        android:layout_marginEnd="8dp"
+        android:layout_toStartOf="@id/btnTakeScreenshot"
+        android:layout_alignParentTop="true"
+        android:padding="8dp"
+        android:layout_marginTop="10dp"
+        android:src="@drawable/pin"
+        android:scaleType="fitCenter"
+        />
+
+
+    <ImageButton
+        android:id="@+id/sendBtn"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:background="@drawable/round_cb"
+        android:layout_marginStart="8dp"
+        android:layout_toEndOf="@id/cornerBtn"
+        android:layout_alignParentTop="true"
+        android:padding="8dp"
+        android:layout_marginTop="10dp"
+        android:src="@drawable/send"
+        android:scaleType="fitCenter"
+        />
+
+    <ImageButton
+        android:id="@+id/cornerBtn"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:background="@drawable/round_cb"
+        android:layout_marginStart="8dp"
+        android:layout_toEndOf="@id/btnTakeScreenshot"
+        android:layout_alignParentTop="true"
+        android:padding="8dp"
+        android:layout_marginTop="10dp"
+        android:src="@drawable/corner_selection"
+        android:scaleType="fitCenter"
+        />
+
+    <ImageButton
+        android:id="@+id/overlayBtn"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:background="@drawable/round_cb"
+        android:layout_marginEnd="8dp"
+        android:layout_toStartOf="@id/pinBtn"
+        android:layout_alignParentTop="true"
+        android:padding="8dp"
+        android:layout_marginTop="10dp"
+        android:src="@drawable/overlay"
+        android:scaleType="fitCenter"
+        />
+    <FrameLayout
+        android:id="@+id/path_draw"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_alignParentTop="true"
+        >
+    </FrameLayout>
+
+    <Button
+        android:id="@+id/btn_draw_State"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:background="@drawable/round_cb"
+        android:padding="8dp"
+        android:text="Draw"
+        android:layout_marginBottom="15dp"
+        android:textColor="#212121" />
+</RelativeLayout>
