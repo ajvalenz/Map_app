@@ -14,6 +14,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.provider.MediaStore;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -23,6 +24,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Point;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -33,22 +36,23 @@ public class CornerSelection extends AppCompatActivity {
     private ImageView imageView;
     private Button homographybt;
     private Button send;
-    private TextView imagen1 ;
+    private TextView imagen1;
     private TextView imagen2;
     private final int GALLERY_REQ_CODE = 1000;
-    int desiredWidth = 980;
-    int desiredHeight = 1200;
+
     ArrayList<Parcelable> parcelableSrcPoints = new ArrayList<>();
     ArrayList<Parcelable> parcelableDstPoints = new ArrayList<>();
     public FrameLayout layout;
     private static final int REQUEST_CODE = 1337;
 
     List<PointF> dstPoints = new ArrayList<>();
-    List<PointF>  sourcePoints = new ArrayList<>();
+    List<PointF> sourcePoints = new ArrayList<>();
     private Bitmap bitmap;
+    private Bitmap resized;
     public String imagePath;
     public String imageDstPath;
     public String imageSrcPath;
+    public int counter =0;
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -68,6 +72,7 @@ public class CornerSelection extends AppCompatActivity {
         homographybt = findViewById(R.id.homographybt);
 
         PolygonView pv = new PolygonView(CornerSelection.this);
+
         layout = findViewById(R.id.layout);
         layout.addView(pv);
         add.setOnClickListener(new View.OnClickListener() {
@@ -84,12 +89,20 @@ public class CornerSelection extends AppCompatActivity {
             @SuppressLint("UseCompatLoadingForDrawables")
             @Override
             public void onClick(View v) {
+                if (counter >0){
+                    homographybt.setVisibility(View.INVISIBLE);
+                }
+                counter+=1;
 
                 dstPoints = pv.getPoints();
-                for(PointF point : dstPoints){
+                calculateDisplacements(dstPoints);
+
+                for (PointF point : dstPoints) {
                     System.out.println(point);
                     parcelableDstPoints.add((Parcelable) point);
                 }
+
+
                 AlertDialog.Builder builder = new AlertDialog.Builder(CornerSelection.this);
                 builder.setTitle("Points Confirmation");
 
@@ -127,7 +140,8 @@ public class CornerSelection extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 sourcePoints = pv.getPoints();
-                for(PointF point : sourcePoints){
+                calculateDisplacements(sourcePoints);
+                for (PointF point : sourcePoints) {
                     System.out.println(point);
                     parcelableSrcPoints.add((Parcelable) point);
                 }
@@ -141,12 +155,12 @@ public class CornerSelection extends AppCompatActivity {
                 builder.setPositiveButton("Send", (DialogInterface.OnClickListener) (dialog, which) -> {
                     imageSrcPath = imagePath;
                     System.out.println(imageSrcPath);
-                    Intent intent  = new Intent(CornerSelection.this, ImageProjection.class);
-                    Bundle extras= new Bundle();
-                    extras.putParcelableArrayList("dstPoints",parcelableDstPoints);
-                    extras.putParcelableArrayList("srcPoints",parcelableSrcPoints);
-                    extras.putString("imageDst",imageDstPath);
-                    extras.putString("imageSrc",imageSrcPath);
+                    Intent intent = new Intent(CornerSelection.this, ImageProjection.class);
+                    Bundle extras = new Bundle();
+                    extras.putParcelableArrayList("dstPoints", parcelableDstPoints);
+                    extras.putParcelableArrayList("srcPoints", parcelableSrcPoints);
+                    extras.putString("imageDst", imageDstPath);
+                    extras.putString("imageSrc", imageSrcPath);
 
                     intent.putExtras(extras);
                     startActivity(intent);
@@ -160,7 +174,7 @@ public class CornerSelection extends AppCompatActivity {
                 AlertDialog alertDialog = builder.create();
                 alertDialog.show();
                 alertDialog.getWindow().setBackgroundDrawable(getResources().getDrawable(R.drawable.rounder_rectangle));
-                }
+            }
 
         });
     }
@@ -180,14 +194,32 @@ public class CornerSelection extends AppCompatActivity {
                 // Load the image into a bitmap
                 InputStream inputStream = getContentResolver().openInputStream(imageUri);
                 bitmap = BitmapFactory.decodeStream(inputStream);
-                Bitmap resizedBitmap = Bitmap.createScaledBitmap(bitmap, desiredWidth, desiredHeight, false);
-                // Display the bitmap in the ImageView
-                imageView.setImageBitmap(bitmap);
 
+                // Display the bitmap in the ImageView
+
+
+                DisplayMetrics displayMetrics = new DisplayMetrics();
+                getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+                int height_screen = displayMetrics.heightPixels;
+                System.out.println(height_screen);
+                int width_screen = displayMetrics.widthPixels;
+                System.out.println(width_screen);
+
+                if(bitmap.getHeight() < height_screen-200 | bitmap.getWidth()< width_screen-200){
+                    resized = bitmap;
+                    imageView.setImageBitmap(resized);
+                    System.out.println(imageView.getWidth() + " "+ imageView.getHeight());
+                    System.out.println(bitmap.getWidth() + " "+ bitmap.getHeight());;
+                }
+                 resized = Bitmap.createScaledBitmap(bitmap,(int)Math.round(bitmap.getWidth()*0.6),(int)Math.round(bitmap.getHeight()*0.6),true);
+                imageView.setImageBitmap(resized);
+                System.out.println(imageView.getWidth() + " "+ imageView.getHeight());
+                System.out.println(resized.getWidth() + " "+ resized.getHeight());;
                 // Hide the "Add" button and show the "Homography" button and layout
                 add.setVisibility(View.INVISIBLE);
                 homographybt.setVisibility(View.VISIBLE);
                 layout.setVisibility(View.VISIBLE);
+
 
             } catch (Exception e) {
                 // Handle exceptions
@@ -196,7 +228,7 @@ public class CornerSelection extends AppCompatActivity {
     }
 
     private String getPathFromURI(Uri contentUri) {
-        String[] projection = { MediaStore.Images.Media.DATA };
+        String[] projection = {MediaStore.Images.Media.DATA};
         Cursor cursor = getContentResolver().query(contentUri, projection, null, null, null);
         if (cursor != null) {
             int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
@@ -210,6 +242,26 @@ public class CornerSelection extends AppCompatActivity {
     }
 
 
+    public void calculateDisplacements(List<PointF> points) {
 
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        int height_screen = displayMetrics.heightPixels;
+        int width_screen = displayMetrics.widthPixels;
+        int height_img = resized.getHeight();
+        int width_img = resized.getWidth();
 
+        float a = (height_screen - height_img)/2.0f;
+        float b = (width_screen - width_img)/2.0f;
+
+        for (PointF point : points){
+             point.x -=b;
+             point.y-=a;
+        }
+
+        for (PointF point : points){
+            point.x = point.x/0.6f;
+            point.y = point.y/0.6f;
+        }
+    }
 }

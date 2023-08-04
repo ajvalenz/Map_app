@@ -2,7 +2,6 @@ package com.example.maps_app;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -14,6 +13,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.net.Uri;
@@ -37,7 +37,12 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.GroundOverlay;
+import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -45,14 +50,15 @@ import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.io.OutputStream;
+import java.sql.SQLOutput;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.SortedMap;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener {
 
     private GoogleMap mMap;
-    float zoomLevelg = 16.0f;
-
+    float zoomLevelg = 18.0f;
 
 
     private ActivityMapsBinding binding;
@@ -61,16 +67,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private String[] separated;
     private ArrayList<UTM> utA;
 
-
-
+    private String imagePath;
     private ImageButton screen_shot;
     private Button btn_draw_State;
     private ImageButton btn_pin_state;
-    private ImageButton btn_send,btnCornerSelection,btnOverlay ;
-    private FrameLayout fram_map ;
+    private ImageButton btn_send, btnCornerSelection, btnOverlay;
+    private FrameLayout fram_map;
 
-
-
+    private static int r_earth= 6371000;
     private Polyline line;
     ArrayList<LatLng> arraylistoflatlng;
     List<Polyline> polylineList;
@@ -81,13 +85,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public double latitude;
     public double longitude;
     private PolylineOptions rectOptions;
-
-
-
-
+    private int[] cs_info = new int[3];
     private ArrayList<String> position = new ArrayList<>();
+    static double[] array = new double[3];
 
+    private boolean isOverlayVisible = false;
 
+    private GroundOverlay site ;
+    private static final int REQUEST_CODE_ACTIVITY_B = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,39 +108,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         assert mapFragment != null;
         mapFragment.getMapAsync(this);
 
-        screen_shot =findViewById(R.id.btnTakeScreenshot);
+         screen_shot = findViewById(R.id.btnTakeScreenshot);
         screen_shot.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                    mMap.snapshot(new GoogleMap.SnapshotReadyCallback() {
-                        @SuppressLint({"SetTextI18n", "UseCompatLoadingForDrawables"})
-                        @Override
-                        public void onSnapshotReady(@Nullable Bitmap bitmap) {
+                mMap.snapshot(new GoogleMap.SnapshotReadyCallback() {
+                    @SuppressLint({"SetTextI18n", "UseCompatLoadingForDrawables"})
+                    @Override
+                    public void onSnapshotReady(@Nullable Bitmap bitmap) {
 
-                            saveScreenshot(bitmap);
+                        saveScreenshot(bitmap);
+                        System.out.println(bitmap.getWidth() +"x"+bitmap.getHeight());
+                        AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+                        builder.setTitle("Corner Selection ");
+                        final TextView input = new TextView(MapsActivity.this);
+                        input.setText("      " +
+                                " " +
+                                "Do you want to proceed to the corner selection section?");
+                        input.setGravity(Gravity.HORIZONTAL_GRAVITY_MASK);
+                        builder.setView(input);
+                        builder.setPositiveButton("OK", (DialogInterface.OnClickListener) (dialog, which) -> {
+                            Intent intent = new Intent(MapsActivity.this, CornerSelection.class);
+                            startActivity(intent);
+                        });
+                        builder.setNegativeButton("Back", (DialogInterface.OnClickListener) (dialog, which) -> {
+                            // If user click no then dialog box is canceled.
+                            dialog.cancel();
+                        });
 
-                            AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
-                            builder.setTitle("Corner Selection ");
-                            final TextView input = new TextView(MapsActivity.this);
-                            input.setText("      " +
-                                    " " +
-                                    "Do you want to proceed to the corner selection section?");
-                            input.setGravity(Gravity.HORIZONTAL_GRAVITY_MASK);
-                            builder.setView(input);
-                            builder.setPositiveButton("OK", (DialogInterface.OnClickListener) (dialog, which) -> {
-                                Intent  intent = new Intent(MapsActivity.this,CornerSelection.class);
-                                startActivity(intent);
-                            });
-                            builder.setNegativeButton("Back", (DialogInterface.OnClickListener) (dialog, which) -> {
-                                // If user click no then dialog box is canceled.
-                                dialog.cancel();
-                            });
-
-                            AlertDialog alertDialog = builder.create();
-                            alertDialog.show();
-                            alertDialog.getWindow().setBackgroundDrawable(getResources().getDrawable(R.drawable.rounder_rectangle));
-                        }
-                    });
+                        AlertDialog alertDialog = builder.create();
+                        alertDialog.show();
+                        alertDialog.getWindow().setBackgroundDrawable(getResources().getDrawable(R.drawable.rounder_rectangle));
+                    }
+                });
             }
         });
 
@@ -151,6 +156,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         btn_pin_state = findViewById(R.id.pinBtn);
         btn_pin_state.setOnClickListener(new View.OnClickListener() {
+
             @Override
             public void onClick(View view) {
                 Is_Pin_Activated = !Is_Pin_Activated;
@@ -170,7 +176,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         btnCornerSelection.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent  intent = new Intent(MapsActivity.this,CornerSelection.class);
+                Intent intent = new Intent(MapsActivity.this, CornerSelection.class);
                 startActivity(intent);
             }
         });
@@ -179,9 +185,47 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         btnOverlay.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(markers.isEmpty()){
-                    Toast.makeText(MapsActivity.this,"Please input the 4 markers",Toast.LENGTH_SHORT).show();
+                if (markers.isEmpty()) {
+                    Toast.makeText(MapsActivity.this, "Please input the 4 markers", Toast.LENGTH_SHORT).show();
                 }
+                isOverlayVisible = true;
+                eraseMarkersFromScreen();
+                calculateData(markers);
+
+               imagePath =DataHolder.getInstance().getData();
+               // imagePath =" sss";
+                System.out.println(imagePath);
+               if( imagePath != null) {
+                   if(isOverlayVisible){
+
+                       LatLng southwest = new LatLng(markers.get(3).getPosition().latitude,markers.get(3).getPosition().longitude);
+                       LatLng northeast = new LatLng(markers.get(1).getPosition().latitude,markers.get(1).getPosition().longitude);
+
+
+                       LatLngBounds bounds = new LatLngBounds.Builder()
+                               .include(southwest)
+                               .include(northeast)
+                               .build();
+
+                       LatLng centercs = bounds.getCenter();
+                      Bitmap bitmap = BitmapFactory.decodeFile("/storage/emulated/0/Pictures/"+imagePath);
+                      int width= bitmap.getWidth()/6;
+                      int height = bitmap.getHeight()/6;
+
+                          GroundOverlayOptions overlayOptions = new GroundOverlayOptions()
+                               .image(BitmapDescriptorFactory.fromPath("/storage/emulated/0/Pictures/"+imagePath))
+                                  //.image(BitmapDescriptorFactory.fromResource(R.drawable.ss3))
+                               .position(centercs,width,height)
+                               .transparency(0.35f);
+
+
+                       GroundOverlay groundOverlay = mMap.addGroundOverlay(overlayOptions);
+                   }
+                }else {
+                    Toast.makeText(MapsActivity.this,"Please make sure image and markers are input", Toast.LENGTH_SHORT).show();
+                }
+
+                //}
 
             }
         });
@@ -218,7 +262,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 int event_action = event.getAction();
 
 
-                if(available){
+                if (available) {
                     //clear the previous polygon first. Write code here
                     available = false;
                 }
@@ -249,8 +293,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         });
         //MOVE THE CAMERA TO SUNY
-        double sLat =37.373513;
-        double sLng =126.666975;
+        double sLat = 37.373513;
+        double sLng = 126.666975;
         LatLng sunyK = new LatLng(sLat, sLng);
 
         mMap.setOnMapClickListener(this);
@@ -308,7 +352,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    public void askPermissions(){
+    public void askPermissions() {
         int permission = ContextCompat.checkSelfPermission(this,
                 android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
@@ -327,22 +371,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private void getCoordsfromLine(ArrayList<LatLng>list){
-        try{
-            for (LatLng cord:list) {
-                String coord = Double.toString(cord.latitude) + ","+Double.toString(cord.longitude);
+    private void getCoordsfromLine(ArrayList<LatLng> list) {
+        try {
+            for (LatLng cord : list) {
+                String coord = Double.toString(cord.latitude) + "," + Double.toString(cord.longitude);
                 position.add(coord);
             }
             Toast toast = Toast.makeText(MapsActivity.this, "Markers location saved", Toast.LENGTH_SHORT);
             toast.show();
             System.out.println(position.size());
             System.out.println(position);
-        }catch(Exception e){
+        } catch (Exception e) {
             Toast msg = Toast.makeText(MapsActivity.this, e.getMessage(), Toast.LENGTH_SHORT);
             msg.show();
         }
 
     }
+
     private ArrayList<UTM> convertToUTM(ArrayList<String> list) {
         try {
             utA = new ArrayList<>();
@@ -376,4 +421,50 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return data;
     }
 
+
+
+    public static void calculateData(ArrayList<Marker>markers) {
+
+        LatLng p1 = markers.get(0).getPosition();
+        LatLng p2 = markers.get(2).getPosition();
+        LatLng p3 = markers.get(1).getPosition();
+
+        double lat1Rad = Math.toRadians(p1.latitude);
+        double lat2Rad = Math.toRadians(p2.latitude);
+        double lat3Rad = Math.toRadians(p3.latitude);
+
+        double lonDiffRad = Math.abs(Math.toRadians(p1.longitude - p3.longitude));
+        double lonDiffRad2 = Math.abs(Math.toRadians(p2.longitude - p3.longitude));
+
+
+        double a = Math.sin((lat3Rad - lat1Rad) / 2) * Math.sin((lat3Rad - lat1Rad) / 2) + Math.cos(lat1Rad) * Math.cos(lat3Rad) * Math.sin(lonDiffRad / 2) * Math.sin(lonDiffRad / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        double width = r_earth * c;
+
+        double a2 = Math.sin(Math.abs(lat2Rad - lat3Rad) / 2) * Math.sin(Math.abs(lat2Rad - lat3Rad) / 2) + Math.cos(lat3Rad) * Math.cos(lat2Rad) * Math.sin(lonDiffRad2 / 2) * Math.sin(lonDiffRad2 / 2);
+        double c2 = 2 * Math.atan2(Math.sqrt(a2), Math.sqrt(1 - a2));
+        double height = r_earth * c2;
+
+
+        double angle =( Math.atan(height / width))* (180/Math.PI);
+
+        double  m = array[2]/array[1];
+
+        array[0] = angle;
+        array[1] = Math.abs(width);
+        array[2] = Math.abs(height);
+
+        System.out.println(" the witdh is "+ width);
+        System.out.println( "The height is "+ height);
+        System.out.println(angle);
+        System.out.println(m);
+    }
+    private void eraseMarkersFromScreen() {
+        for (Marker marker : markers) {
+            marker.setVisible(false);
+        }
+    }
+
 }
+
+
