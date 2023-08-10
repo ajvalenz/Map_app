@@ -77,6 +77,24 @@ public class ImageProjection extends AppCompatActivity {
 
     private double  max_x,max_y,min_x,min_y=0.0;
 
+    double maxX = Integer.MIN_VALUE; // Initialize with a very small value
+    double maxY = Integer.MIN_VALUE;
+
+    private MatOfPoint2f dstPrueba = new MatOfPoint2f(new Point(254.944,958.4771),
+            new Point(476.73565,673.9331),new Point(912.9345,1001.8),new Point(689.0405,1287.3));
+    private MatOfPoint2f srcPrueba = new MatOfPoint2f(new Point(955.4076,321.9467),
+            new Point(1637.5,837.4848),new Point(854.8274,1865.6),new Point(170.5218,1344.9));
+
+    private MatOfPoint2f dstPrueba2 = new MatOfPoint2f(new Point(170.7500,997.2500),
+            new Point(415.2500,679.2500),new Point(914.7500,1054.3),new Point(659.7500,1379.8));
+    private MatOfPoint2f srcPrueba2= new MatOfPoint2f(new Point(1042.0,254.0),
+            new Point(1656.0,718.00),new Point(951.0,1644),new Point(336.000,1183));
+
+    private MatOfPoint2f dstPrueba3 = new MatOfPoint2f(new Point(101.8,1178.7),
+            new Point(341.7,908.8),new Point(836.7,1309.3),new Point(607.2,1570.2));
+    private MatOfPoint2f srcPrueba3= new MatOfPoint2f(new Point(2740.5,1513.5),
+            new Point(3952.5,2203.5),new Point(96.5,2873.5),new Point(168.5,1357.5));
+
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -162,7 +180,7 @@ public class ImageProjection extends AppCompatActivity {
         getCenterSourceAverage(cordsSrc);
         Point dstCenterPoint = transformPoint(center_source,homographyMatrix);
 
-        System.out.println(center_source.x +","+ center_source.y);
+        //System.out.println(center_source.x +","+ center_source.y);
         System.out.println(dstCenterPoint.x +","+ dstCenterPoint.y);
 
         List<PointF> image = new ArrayList<>();
@@ -170,11 +188,10 @@ public class ImageProjection extends AppCompatActivity {
         image.add( new PointF(bitmapSrc.getWidth(),0));
         image.add( new PointF(bitmapSrc.getWidth(),bitmapSrc.getHeight()));
         image.add( new PointF(0,bitmapSrc.getHeight()));
-
-        System.out.println(image.stream());
+        //System.out.println(image.stream());
 
         List<Point> transformArray =transformArray(image,homographyMatrix);
-        System.out.println(transformArray.stream().toString());
+        //System.out.println(transformArray.stream().toString());
         shortestDistance(dstCenterPoint,transformArray);
 
         System.out.println("min x "+ min_x);
@@ -183,13 +200,35 @@ public class ImageProjection extends AppCompatActivity {
         System.out.println("max y "+ max_y);
         // Create a new Mat for the result image
 
+        for (Point point : transformArray) {
+            if (point != null) { // Check for null points if needed
+                 maxX = Math.max(maxX, point.x);
+                 maxY = Math.max(maxY, point.y);
+            }
+        }
 
+        System.out.println(maxX);
+        System.out.println(maxY);
         Mat resultImage = new Mat();
         // Apply perspective transformation to the source image
-        Imgproc.warpPerspective(sourceImage, resultImage, homographyMatrix, new Size(1080, 2028));
+        Size targetSize;
 
-        Range row = new Range((int) Math.round(dstCenterPoint.y - min_y), (int) Math.round(dstCenterPoint.y+min_y));
-        Range column = new Range((int) Math.round(dstCenterPoint.x-min_x), (int) Math.round(dstCenterPoint.x+min_x));
+        if ((int) maxX > bitmapDst.getWidth() && (int) maxY > bitmapDst.getHeight()) {
+            targetSize = new Size(maxX + 1, maxY + 1);
+        } else if ((int) maxX > bitmapDst.getWidth()) {
+            targetSize = new Size(maxX + 1, bitmapDst.getHeight());
+        } else if ((int) maxY > bitmapDst.getHeight()) {
+            targetSize = new Size(bitmapDst.getWidth(), maxY + 1);
+        } else {
+            targetSize = new Size(bitmapDst.getWidth(), bitmapDst.getHeight());
+        }
+        Imgproc.warpPerspective(sourceImage, resultImage, homographyMatrix, targetSize);
+        Bitmap result = Bitmap.createBitmap(resultImage.cols(),resultImage.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(resultImage, result);
+
+        Range row = new Range((int) Math.abs(Math.round(dstCenterPoint.y - max_y)), (int) Math.abs(Math.round(dstCenterPoint.y+max_y)));
+        Range column = new Range((int) Math.abs(Math.round(dstCenterPoint.x-max_x)), (int) Math.abs(Math.round(dstCenterPoint.x+max_x)));
+
 
         System.out.println(row.toString() + ","+ column.toString());
 

@@ -21,6 +21,22 @@ public class UTM {
         return zone;
     }
 
+    public void setEasting(double easting) {
+        this.easting = easting;
+    }
+
+    public void setNorthing(double northing) {
+        this.northing = northing;
+    }
+
+    public void setZone(int zone) {
+        this.zone = zone;
+    }
+
+    public void setLetter(char letter) {
+        this.letter = letter;
+    }
+
     public char getLetter() {
         return letter;
     }

@@ -166,9 +166,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         btn_send.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
+
+                List<Double> x_coords = new ArrayList<>();
+                List<Double> y_coords = new ArrayList<>();
+
+
                 getCoordsfromLine(arraylistoflatlng);
+                // arraylistoflatlng.forEach(System.out::println);
                 convertToUTM(position);
                 sendData(utA);
+
+                for (UTM utm : utA) {
+                    double x_cord = utm.getEasting() / 100000;
+                    double y_cord = utm.getNorthing() / 100000;
+                    x_coords.add(x_cord);
+                    y_coords.add(y_cord);
+                }
+
+                System.out.println(x_coords.toString());
+                System.out.println(y_coords.toString());
+
+               //linspace();{
+                for (LatLng punto : arraylistoflatlng){
+                    MarkerOptions markerOptions = new MarkerOptions()
+                            .position(punto);
+
+                    Marker marker = mMap.addMarker(markerOptions);
+                }
             }
         });
 
@@ -190,16 +215,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
                 isOverlayVisible = true;
                 eraseMarkersFromScreen();
-                calculateData(markers);
+                //calculateData(markers);
 
-               imagePath =DataHolder.getInstance().getData();
-               // imagePath =" sss";
+               //imagePath =DataHolder.getInstance().getData();
+               imagePath =" sss";
                 System.out.println(imagePath);
+
                if( imagePath != null) {
                    if(isOverlayVisible){
+                    ////////////////////////////////////////////////////////////////////////////////////////////////////
+                       LatLng southwest = new LatLng(37.373657,126.666437);
+                       LatLng northeast = new LatLng(37.373597,126.667677);
+                       LatLng southeast = new LatLng(37.373146,126.667266);
 
-                       LatLng southwest = new LatLng(markers.get(3).getPosition().latitude,markers.get(3).getPosition().longitude);
-                       LatLng northeast = new LatLng(markers.get(1).getPosition().latitude,markers.get(1).getPosition().longitude);
+
+                      // LatLng southwest = new LatLng(markers.get(3).getPosition().latitude,markers.get(3).getPosition().longitude);
+                      // LatLng northeast = new LatLng(markers.get(1).getPosition().latitude,markers.get(1).getPosition().longitude);
 
 
                        LatLngBounds bounds = new LatLngBounds.Builder()
@@ -208,15 +239,42 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                .build();
 
                        LatLng centercs = bounds.getCenter();
+
+                       ///////////////////////////////////////////////////////////////////////////////////////////////
+
+
+                       //LatLng center = new LatLng(37.37360262532268,126.66695695370437);
+                       LatLng center_maps = new LatLng(37.373611,126.667054);
+                       LatLng center_maps3 = new LatLng(37.373645,126.667017);
+                       //LatLng center_maps2 = new LatLng(37.377821,126.664394);
+                       // center2 = new LatLng(37.373611,126.666962);
+
+                      LatLng center = markers.get(0).getPosition();
+                       System.out.println(center.toString());
+                      // WGS84 center_desplazado = new WGS84(center.latitude,center.longitude);
+                       WGS84 center_desplazado = new WGS84(center_maps3.latitude,center_maps3.longitude);
+
+                       UTM utm= new UTM(center_desplazado);
+                       double new_E = utm.getEasting()-(8.1524536*Math.cos(-0.024353));
+                       double new_N = utm.getNorthing()-(8.1524536*Math.sin(-0.024353));
+                       utm.setEasting(new_E);
+                       utm.setNorthing(new_N);
+                       WGS84 newCenter= new WGS84(utm);
+
+                       //System.out.println(" el centro es "+center.toString());
                       Bitmap bitmap = BitmapFactory.decodeFile("/storage/emulated/0/Pictures/"+imagePath);
-                      int width= bitmap.getWidth()/6;
-                      int height = bitmap.getHeight()/6;
+                      //int width= bitmap.getWidth()/6;
+                     float width =138.0f;
+                       //float width =210.333f;
+                      //int height = bitmap.getHeight()/6;
+                       float height = 117.833f;
+                       //float height = 250.8333f;
 
                           GroundOverlayOptions overlayOptions = new GroundOverlayOptions()
-                               .image(BitmapDescriptorFactory.fromPath("/storage/emulated/0/Pictures/"+imagePath))
-                                  //.image(BitmapDescriptorFactory.fromResource(R.drawable.ss3))
-                               .position(centercs,width,height)
-                               .transparency(0.35f);
+                               //.image(BitmapDescriptorFactory.fromPath("/storage/emulated/0/Pictures/"+imagePath))
+                                 .image(BitmapDescriptorFactory.fromResource(R.drawable.prueba))
+                               .position(new LatLng(newCenter.getLatitude(),newCenter.getLongitude()),width,height);
+                               //.transparency(0.3f);
 
 
                        GroundOverlay groundOverlay = mMap.addGroundOverlay(overlayOptions);
@@ -257,6 +315,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Point x_y_points = new Point(x_co, y_co);
 
                 LatLng latLng = mMap.getProjection().fromScreenLocation(x_y_points);
+
                 latitude = latLng.latitude;
                 longitude = latLng.longitude;
                 int event_action = event.getAction();
@@ -277,7 +336,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         rectOptions = new PolylineOptions()
                                 .addAll(arraylistoflatlng)
                                 .geodesic(true)
-                                .color(Color.RED);
+                                .color(Color.BLUE);
                         line = mMap.addPolyline(rectOptions);
                         polylineList.add(line);
                         break;
@@ -303,6 +362,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
 
+        //Marker c1 = mMap.addMarker(new MarkerOptions().position(new LatLng(37.37360262532268,126.66695695370437)));
 
     }
 
@@ -464,7 +524,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             marker.setVisible(false);
         }
     }
-
+    private void linspace(){
+        List<LatLng> array = new ArrayList<>();
+        int step = Math.round((arraylistoflatlng.size() - 1) / 10);
+        for (int i = 0; i < arraylistoflatlng.size(); i += step) {
+            array.add(arraylistoflatlng.get(i));
+        }
+        if (!array.contains(arraylistoflatlng.get(arraylistoflatlng.size()-1))) {
+            array.add(arraylistoflatlng.get(arraylistoflatlng.size()-1));
+        }
+        for (LatLng punto: array) {
+            MarkerOptions markerOptions = new MarkerOptions()
+                    .position(punto);
+            Marker marker = mMap.addMarker(markerOptions);
+        }
+    }
 }
 
 
